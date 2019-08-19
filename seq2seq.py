@@ -1,12 +1,13 @@
 from attention import AttentionLayer
 
+#Import the Libraries
 import numpy as np  
 import pandas as pd 
 import re           
 from bs4 import BeautifulSoup 
 from keras.preprocessing.text import Tokenizer 
 from keras.preprocessing.sequence import pad_sequences
-from nltk.corpus import stopwords   
+from nltk.corpus import stopwords
 from tensorflow.keras.layers import Input, LSTM, Embedding, Dense, Concatenate, TimeDistributed, Bidirectional
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
@@ -14,11 +15,16 @@ import warnings
 pd.set_option("display.max_colwidth", 200)
 warnings.filterwarnings("ignore")
 
+#Read the dataset
 data=pd.read_csv("../input/amazon-fine-food-reviews/Reviews.csv",nrows=100000)
 
+#Drop Duplicates and NA values
 data.drop_duplicates(subset=['Text'],inplace=True)  #dropping duplicates
 data.dropna(axis=0,inplace=True)   #dropping na
 
+
+#Preprocessing
+#Contraction
 contraction_mapping = {"ain't": "is not", "aren't": "are not","can't": "cannot", "'cause": "because", "could've": "could have", "couldn't": "could not",
 
                            "didn't": "did not", "doesn't": "does not", "don't": "do not", "hadn't": "had not", "hasn't": "has not", "haven't": "have not",
@@ -65,6 +71,67 @@ contraction_mapping = {"ain't": "is not", "aren't": "are not","can't": "cannot",
 
                            "you're": "you are", "you've": "you have"}
 
+#print data
+#print data[Text][:10]
+#print data['Summary'][:10]
 
-#print data['Text'][:10]
+#Preprocessing
+#Text Cleaning
+stop_words = set(stopwords.words('english')) 
+def text_cleaner(text):
+    newString = text.lower()				#Convert everything to lowercase
+    newString = BeautifulSoup(newString, "lxml").text	#Remove HTML tags
+    newString = re.sub(r'\([^)]*\)', '', newString)	#Eliminate punctuations and special characters, Remove any text inside the parenthesis ( )
+    newString = re.sub('"','', newString)
+    newString = ' '.join([contraction_mapping[t] if t in contraction_mapping else t for t in newString.split(" ")]) #Contraction mapping    
+    newString = re.sub(r"'s\b","",newString)		#Remove s
+    newString = re.sub("[^a-zA-Z]", " ", newString) 
+    tokens = [w for w in newString.split() if not w in stop_words]	#Remove stopwords
+    long_words=[]
+    for i in tokens:
+        if len(i)>=3:                  			#removing short word
+            long_words.append(i)   
+    return (" ".join(long_words)).strip()
+
+cleaned_text = []
+for t in data['Text']:
+    cleaned_text.append(text_cleaner(t))
+
+
+#Preprocessing
+#Summary Cleaning
+def summary_cleaner(text):
+    newString = re.sub('"','', text)
+    newString = ' '.join([contraction_mapping[t] if t in contraction_mapping else t for t in newString.split(" ")])    
+    newString = re.sub(r"'s\b","",newString)
+    newString = re.sub("[^a-zA-Z]", " ", newString)
+    newString = newString.lower()
+    tokens=newString.split()
+    newString=''
+    for i in tokens:
+        if len(i)>1:                                 
+            newString=newString+i+' '  
+    return newString
+
+#Call the above function
+cleaned_summary = []
+for t in data['Summary']:
+    cleaned_summary.append(summary_cleaner(t))
+
+data['cleaned_text']=cleaned_text
+data['cleaned_summary']=cleaned_summary
+data['cleaned_summary'].replace('', np.nan, inplace=True)
+data.dropna(axis=0,inplace=True)
+
+#append start and end tag
+data['cleaned_summary'] = data['cleaned_summary'].apply(lambda x : '_START_ '+ x + ' _END_')
+
+#Print Top 5 reviews
+for i in range(5):
+    print("Review:",data['cleaned_text'][i])
+    print("Summary:",data['cleaned_summary'][i])
+    print("\n")
+
+#End Preprocessing
+
 
