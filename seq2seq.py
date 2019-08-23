@@ -134,4 +134,42 @@ for i in range(5):
 
 #End Preprocessing
 
+max_len_text=80 
+max_len_summary=10
+
+from sklearn.model_selection import train_test_split
+x_tr,x_val,y_tr,y_val=train_test_split(data['cleaned_text'],data['cleaned_summary'],test_size=0.1,random_state=0,shuffle=True)
+
+#Text Tokenizer
+#prepare a tokenizer for reviews on training data
+x_tokenizer = Tokenizer()
+x_tokenizer.fit_on_texts(list(x_tr))
+
+#convert text sequences into integer sequences
+x_tr    =   x_tokenizer.texts_to_sequences(x_tr) 
+x_val   =   x_tokenizer.texts_to_sequences(x_val)
+
+#padding zero upto maximum length
+x_tr    =   pad_sequences(x_tr,  maxlen=max_len_text, padding='post') 
+x_val   =   pad_sequences(x_val, maxlen=max_len_text, padding='post')
+
+x_voc_size   =  len(x_tokenizer.word_index) +1
+
+#Summary Tokenizer
+#preparing a tokenizer for summary on training data 
+y_tokenizer = Tokenizer()
+y_tokenizer.fit_on_texts(list(y_tr))
+
+#convert summary sequences into integer sequences
+y_tr    =   y_tokenizer.texts_to_sequences(y_tr) 
+y_val   =   y_tokenizer.texts_to_sequences(y_val) 
+
+#padding zero upto maximum length
+y_tr    =   pad_sequences(y_tr, maxlen=max_len_summary, padding='post')
+y_val   =   pad_sequences(y_val, maxlen=max_len_summary, padding='post')
+
+y_voc_size  =   len(y_tokenizer.word_index) +1
+
+
+#Model Building
 
